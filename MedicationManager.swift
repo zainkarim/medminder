@@ -15,6 +15,7 @@ class MedicationManager: ObservableObject {
     }
 
     init() {
+        UserDefaults.standard.removeObject(forKey: "isOnboardingCompleted")
         loadFromUserDefaults()
     }
 

@@ -1,19 +1,18 @@
-//
-//  medication_trackerApp.swift
-//  medication tracker
-//
-//  Created by Zain Karim on 11/5/23.
-//
-
 import SwiftUI
 
 @main
 struct MedicationReminderApp: App {
     @StateObject private var medicationManager = MedicationManager()
+    @AppStorage("isOnboardingCompleted") private var isOnboardingCompleted = false
 
     var body: some Scene {
         WindowGroup {
-            MedicationListView(manager: medicationManager)
+            if isOnboardingCompleted {
+                MedicationListView(manager: medicationManager)
+            } else {
+                OnboardingView(isOnboardingCompleted: $isOnboardingCompleted)
+            }
         }
     }
+
 }

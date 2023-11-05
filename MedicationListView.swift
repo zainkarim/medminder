@@ -18,7 +18,7 @@ struct MedicationListView: View {
                 }
                 .onDelete(perform: deleteMedication)
             }
-            .navigationBarTitle("My Medications")
+            .navigationBarTitle("My Medications💊")
             .navigationBarItems(trailing: NavigationLink(destination: MedicationView(manager: manager, medication: nil)) {
                 Image(systemName: "plus")
             })
