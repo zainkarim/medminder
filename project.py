@@ -1,46 +1,40 @@
 import cv2
 import dlib
 import numpy as np
+import time
+from imutils import face_utils
 import os
 
 # Open camera
-cap = cv2.VideoCapture(0)  # '0' is usually the default value for the primary camera.
-
+cap = cv2.VideoCapture(0)
 if not cap.isOpened():
     print("Cannot open camera")
     exit()
 
 # Load facial landmark predictor
-predictor_path = "shape_predictor_68_face_landmarks.dat"  # Ensure the model file is in the same directory as your script.
+predictor_path = "shape_predictor_68_face_landmarks.dat"
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(predictor_path)
 
-# Define eye aspect ratio
+# Define eye aspect ratio function
 def eye_aspect_ratio(eye):
-    # compute the euclidean distances between the vertical eye landmarks
     A = np.linalg.norm(eye[1] - eye[5])
     B = np.linalg.norm(eye[2] - eye[4])
-
-    # compute the euclidean distance between the horizontal eye landmarks
     C = np.linalg.norm(eye[0] - eye[3])
-
-    # compute the eye aspect ratio
     ear = (A + B) / (2.0 * C)
-
     return ear
 
-# Monitor the driver
-import numpy as np
-import time
-from imutils import face_utils
-
+# Thresholds and counters
 EYE_AR_THRESH = 0.3
-EYE_AR_CONSEC_FRAMES = 48  # for example, if you want to trigger the alarm after 3 seconds, and your webcam has a framerate of 16 fps
+EYE_AR_CONSEC_FRAMES = 48
+FACE_NOT_DETECTED_THRESHOLD = 3  # seconds
 
-# Initialize the frame counter as well as a boolean used to indicate if the alarm is going off.
+# Initialize the frame counter and a boolean used to indicate if the alarm is going off
 COUNTER = 0
 ALARM_ON = False
+LAST_FACE_DETECTED_TIME = time.time()
 
+# Start the video stream
 while True:
     ret, frame = cap.read()
     if not ret:
@@ -50,39 +44,61 @@ while True:
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     rects = detector(gray, 0)
 
-    for rect in rects:
-        shape = predictor(gray, rect)
-        shape = face_utils.shape_to_np(shape)
+    # If faces are detected
+    if rects:
+        LAST_FACE_DETECTED_TIME = time.time()  # Reset the timer whenever a face is detected
+        for rect in rects:
+            shape = predictor(gray, rect)
+            shape = face_utils.shape_to_np(shape)
 
-        leftEye = shape[42:48]
-        rightEye = shape[36:42]
-        leftEAR = eye_aspect_ratio(leftEye)
-        rightEAR = eye_aspect_ratio(rightEye)
+            # Draw rectangle around the face
+            (x, y, w, h) = face_utils.rect_to_bb(rect)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-        ear = (leftEAR + rightEAR) / 2.0
+            # Draw circles around the eyes
+            leftEye = shape[42:48]
+            rightEye = shape[36:42]
+            leftEAR = eye_aspect_ratio(leftEye)
+            rightEAR = eye_aspect_ratio(rightEye)
+            
+            for (x, y) in shape[36:48]:
+                cv2.circle(frame, (x, y), 1, (0, 0, 255), -1)
 
-        if ear < EYE_AR_THRESH:
-            COUNTER += 1
+            ear = (leftEAR + rightEAR) / 2.0
+            print("EAR: {:.2f}".format(ear))  # Terminal output for debugging
 
-            if COUNTER >= EYE_AR_CONSEC_FRAMES:
-                if not ALARM_ON:
-                    ALARM_ON = True
-                    # Put the code to trigger your chime or alarm here
-                    print("ALERT! Please pay attention to the road!")
+            if ear < EYE_AR_THRESH:
+                COUNTER += 1
 
+                if COUNTER >= EYE_AR_CONSEC_FRAMES:
+                    if not ALARM_ON:
+                        ALARM_ON = True
+                        # Trigger alarm
+                        os.system('afplay chime.mp3')
+                        cv2.putText(frame, "ALERT! Please pay attention to the road!", (10, 30),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            else:
+                COUNTER = 0
+                ALARM_ON = False
+    else:
+        # If no face is detected, check how much time has passed
+        if (time.time() - LAST_FACE_DETECTED_TIME) > FACE_NOT_DETECTED_THRESHOLD:
+            if not ALARM_ON:
+                ALARM_ON = True
+                # Trigger alarm
+                os.system('afplay chime.mp3')
+                cv2.putText(frame, "ALERT! No driver detected!", (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         else:
-            COUNTER = 0
             ALARM_ON = False
 
-    # Display the resulting frame
+    # Display the resulting frame with overlays
     cv2.imshow('Frame', frame)
 
+    # Break the loop when 'q' key is pressed
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
-# When everything done, release the capture
+# Release the capture and destroy all windows when everything is done
 cap.release()
 cv2.destroyAllWindows()
-
-if ALARM_ON:
-    os.system('afplay /path/to/sound/file.mp3')
