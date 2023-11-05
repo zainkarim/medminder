@@ -38,4 +38,10 @@ class MedicationManager: ObservableObject {
             medications = decoded
         }
     }
+    
+    func updateMedication(_ medication: Medication) {
+            if let index = medications.firstIndex(where: { $0.id == medication.id }) {
+                medications[index] = medication
+            }
+        }
 }

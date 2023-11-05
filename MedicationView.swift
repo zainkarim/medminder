@@ -8,6 +8,18 @@ struct MedicationView: View {
     @State private var frequency: [String] = []
     @State private var timeOfDay = Date() // State variable for the time picker
     @ObservedObject var manager: MedicationManager
+    @State private var medicationToEdit: Medication?
+    
+    init(manager: MedicationManager, medication: Medication?) {
+            self._manager = ObservedObject(wrappedValue: manager)
+            self._medicationToEdit = State(initialValue: medication)
+            if let medication = medication {
+                _name = State(initialValue: medication.name)
+                _dosage = State(initialValue: medication.dosage)
+                _frequency = State(initialValue: medication.frequency)
+                _timeOfDay = State(initialValue: medication.time)
+            }
+        }
 
     var body: some View {
         NavigationView {
@@ -37,8 +49,8 @@ struct MedicationView: View {
                     .datePickerStyle(WheelDatePickerStyle())
                 }
                 
-                Button(action: addMedication) {
-                    Text("Add Medication")
+                Button(action: addOrUpdateMedication) {
+                    Text(medicationToEdit != nil ? "Update Medication" : "Add Medication")
                 }
             }
             .navigationBarTitle("Add Medication")
@@ -64,6 +76,34 @@ struct MedicationView: View {
         let weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         return days.sorted { weekDays.firstIndex(of: $0)! < weekDays.firstIndex(of: $1)! }
     }
+    
+    private func addOrUpdateMedication() {
+            let medication = Medication(
+                id: medicationToEdit?.id ?? UUID(), // Use existing ID if editing
+                name: name,
+                dosage: "\(dosage) mg",
+                frequency: sortDaysOfWeek(frequency),
+                time: timeOfDay
+            )
+            
+            if medicationToEdit != nil {
+                manager.updateMedication(medication)
+            } else {
+                manager.addMedication(medication)
+            }
+            
+            // Reset the fields and dismiss
+            resetFields()
+            presentationMode.wrappedValue.dismiss()
+        }
+    private func resetFields() {
+            name = ""
+            dosage = ""
+            frequency = []
+            timeOfDay = Date()
+            medicationToEdit = nil
+        }
+
 }
 
 // MultipleSelectionView and MultipleSelectionRow remain the same.
