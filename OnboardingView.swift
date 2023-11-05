@@ -6,13 +6,18 @@ struct OnboardingView: View {
     @State private var showWelcome = true // To toggle between the welcome and notification request view
 
     var body: some View {
-        VStack {
-            if showWelcome {
-                welcomeView
-                    .transition(.opacity)
-            } else {
-                notificationRequestView
-                    .transition(.opacity)
+        ZStack {
+            Color(hex: "C3DBC5")
+                .edgesIgnoringSafeArea(.all) // This will make the color extend to the edges
+
+            VStack {
+                if showWelcome {
+                    welcomeView
+                        .transition(.opacity)
+                } else {
+                    notificationRequestView
+                        .transition(.opacity)
+                }
             }
         }
     }
@@ -23,7 +28,7 @@ struct OnboardingView: View {
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .padding()
-
+                .multilineTextAlignment(.center) // This will center align the text
             Button("Continue") {
                 withAnimation {
                     showWelcome = false
@@ -34,6 +39,8 @@ struct OnboardingView: View {
             .foregroundColor(.white)
             .clipShape(Capsule())
         }
+        .background(Color(hex: "C3DBC5")) // Set the background color here
+        .edgesIgnoringSafeArea(.all) // Make it extend to the screen edges
     }
 
     var notificationRequestView: some View {
@@ -42,21 +49,22 @@ struct OnboardingView: View {
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .padding()
-
+                .multilineTextAlignment(.center) // This will center align the text
             Button("Okay!") {
                 requestNotificationPermission()
             }
             .padding()
-            .background(Color.blue)
+            .background(Color.blue) // Choose an appropriate color that stands out
             .foregroundColor(.white)
             .clipShape(Capsule())
-
             Button("Maybe later") {
-                isOnboardingCompleted = true // Assuming the user can enable notifications later in settings.
+                isOnboardingCompleted = true
             }
             .padding()
-            .foregroundColor(Color.blue)
+            .foregroundColor(Color.blue) // Choose an appropriate color that contrasts well
         }
+        .background(Color(hex: "C3DBC5")) // Set the background color here
+        .edgesIgnoringSafeArea(.all) // Make it extend to the screen edges
     }
 
     private func requestNotificationPermission() {
@@ -68,5 +76,22 @@ struct OnboardingView: View {
                 print("Error: \(error.localizedDescription)")
             }
         }
+    }
+    
+}
+
+// Extension to allow initialization of Color with a hex string
+extension Color {
+    init(hex: String) {
+        let scanner = Scanner(string: hex)
+        _ = scanner.scanString("#")
+
+        var rgb: UInt64 = 0
+        scanner.scanHexInt64(&rgb)
+
+        let r = Double((rgb >> 16) & 0xFF) / 255.0
+        let g = Double((rgb >> 8) & 0xFF) / 255.0
+        let b = Double(rgb & 0xFF) / 255.0
+        self.init(red: r, green: g, blue: b)
     }
 }
